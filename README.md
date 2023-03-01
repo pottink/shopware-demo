@@ -17,6 +17,11 @@ To setup the local environment and build your local SSL certificates run:
 
 `$ ./sysadmin/docker/init.sh`
 
+## Demodata
+
+You can setup demo data with:
+
+`$ APP_ENV=prod php bin/console framework:demodata`
 
 ## Hosts file
 
