@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<psalm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="https://getpsalm.org/schema/config"
+       errorLevel="1"
+       findUnusedBaselineEntry="true"
+       xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd">
+    <projectFiles>
+        <directory name="custom/static-plugins"/>
+        <directory name="src"/>
+        <ignoreFiles>
+            <directory name="tests"/>
+            <directory name="vendor"/>
+        </ignoreFiles>
+    </projectFiles>
+    <plugins>
+        <pluginClass class="Psalm\SymfonyPsalmPlugin\Plugin"/>
+        <pluginClass class="Psl\Psalm\Plugin"/>
+    </plugins>
+    <issueHandlers>
+        <InternalMethod errorLevel="info"/>
+        <DeprecatedMethod>
+            <errorLevel type="suppress">
+                <referencedMethod name="Shopware\Core\Framework\Struct\Collection::getIterator"/>
+                <referencedMethod name="Shopware\Core\Framework\Struct\ExtendableTrait::addExtension"/>
+            </errorLevel>
+        </DeprecatedMethod>
+        <DeprecatedClass>
+            <!-- SW 6.5.0.0 will remove this -->
+            <errorLevel type="info">
+                <referencedClass name="Shopware\Core\Framework\Event\EventAction\EventActionDefinition"/>
+                <referencedClass name="Shopware\Storefront\Controller\AddressController"/>
+            </errorLevel>
+        </DeprecatedClass>
+        <DeprecatedInterface>
+            <errorLevel type="info">
+                <referencedClass name="Shopware\Core\System\SalesChannel\Entity\SalesChannelRepositoryInterface"/>
+            </errorLevel>
+        </DeprecatedInterface>
+    </issueHandlers>
+</psalm>

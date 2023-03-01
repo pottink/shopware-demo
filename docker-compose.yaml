@@ -1,0 +1,158 @@
+version: '3'
+
+services:
+  traefik:
+    restart: always
+    image: traefik
+    container_name: shopware-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.file.directory=/etc/traefik/dynamic_conf"
+      - "--providers.file.watch=true"
+      - "--entrypoints.db.address=:3306"
+      - "--entrypoints.mailhog.address=:8025"
+      - "--entrypoints.rabbitmq.address=:15672"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--serversTransport.insecureSkipVerify=true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./sysadmin/docker/traefik/certs.yaml:/etc/traefik/dynamic_conf/certs.yaml:ro
+      - ./sysadmin/docker/ssl/local.crt:/certs/local.crt:ro
+      - ./sysadmin/docker/ssl/local.key:/certs/local.key:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080"
+      - "3306:3306"
+      - "15672:15672"
+      - "8025:8025"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOCKER_BASEHOST:-shopware.local}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.port=8080"
+    networks:
+      - proxy
+      - shopware
+
+  application:
+    image: pottink/php-shopware:8.1
+    container_name: shopware-application
+    volumes:
+      - ./sysadmin/docker/php/php-overrides.ini:/usr/local/etc/php/conf.d/00_php-overrides.ini
+      - ./:/var/www/html
+    depends_on:
+      - traefik
+      - db
+      - rabbitmq
+      - redis
+    networks:
+      - proxy
+      - shopware
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  db:
+    image: percona:${DOCKER_MYSQL_VERSION:-8.0}
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DOCKER_MYSQL_ROOT_PASSWORD:-toor}
+      - MYSQL_DATABASE=${DOCKER_MYSQL_DATABASE:-shopware_dev}
+      - TZ=Europe/Brussels
+    command: --innodb-doublewrite=0
+    container_name: shopware-db
+    volumes:
+      - mysql-db:/var/lib/mysql
+    cap_add:
+      - SYS_NICE
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.db.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.db.entrypoints=db"
+      - "traefik.http.services.db.loadbalancer.server.port=3306"
+      - "traefik.port=3306"
+    depends_on:
+      - traefik
+    networks:
+      - proxy
+      - shopware
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: shopware-nginx
+    depends_on:
+      - traefik
+      - application
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=80"
+      - "traefik.port=443"
+      - "traefik.http.routers.nginx.rule=Host(`${DOCKER_BASEHOST:-shopware.local}`)"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls=true"
+      - "traefik.http.services.nginx.loadbalancer.server.port=443"
+      - "traefik.http.services.nginx.loadbalancer.server.scheme=https"
+    volumes:
+      - ./:/var/www/html
+      - ./sysadmin/docker/nginx/shopware.conf:/etc/nginx/conf.d/shopware.conf
+      - ./sysadmin/docker/ssl/local.crt:/etc/ssl/certs/local.crt
+      - ./sysadmin/docker/ssl/local.key:/etc/ssl/certs/local.key
+    networks:
+      - proxy
+      - shopware
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: shopware-mailhog
+    depends_on:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailhog.rule=Host(`mailhog.${DOCKER_BASEHOST:-shopware.local}`)"
+      - "traefik.http.routers.mailhog.entrypoints=mailhog"
+      - "traefik.http.routers.mailhog.tls=true"
+      - "traefik.http.services.mailhog.loadbalancer.server.port=8025"
+      - "traefik.port=8025"
+    networks:
+      - proxy
+      - shopware
+
+  redis:
+    image: redis:${DOCKER_REDIS_VERSION:-7-alpine}
+    container_name: shopware-redis
+    networks:
+      - shopware
+
+  rabbitmq:
+    image: rabbitmq:${DOCKER_RABBITMQ_VERSION:-3-management-alpine}
+    environment:
+      - RABBITMQ_DEFAULT_USER=${DOCKER_RABBITMQ_USER:-rabbitmq}
+      - RABBITMQ_DEFAULT_PASS=${DOCKER_RABBITMQ_PASSWORD:-rabbitmq}
+      - RABBITMQ_DEFAULT_VHOST=${DOCKER_RABBITMQ_VHOST:-shopware}
+    container_name: shopware-rabbitmq
+    depends_on:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.${DOCKER_BASEHOST:-shopware.local}`)"
+      - "traefik.http.routers.rabbitmq.entrypoints=rabbitmq"
+      - "traefik.http.routers.rabbitmq.tls=true"
+      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+    networks:
+      - proxy
+      - shopware
+
+volumes:
+  mysql-db: {}
+
+networks:
+  proxy:
+    driver: bridge
+  shopware:

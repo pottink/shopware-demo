@@ -1,0 +1,12 @@
+[Unit]
+Description=Shopware: Generate sitemap
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/approot/current/bin/console sitemap:generate
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

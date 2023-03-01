@@ -1,0 +1,15 @@
+[Unit]
+Description=Shopware Message Queue Consumer (%I)
+After=After=network-online.target
+Requires=dbus.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/php /opt/approot/current/bin/console messenger:consume %I --time-limit=3600 --memory-limit=2048M
+RestartSec=10s
+Restart=always
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=default.target

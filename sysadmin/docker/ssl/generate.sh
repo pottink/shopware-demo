@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=TakeTheLead, Inc./CN=tuindeco.local" -addext "subjectAltName=DNS:tuindeco.local" -newkey rsa:2048 -keyout local.key -out local.crt;

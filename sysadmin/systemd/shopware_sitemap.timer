@@ -1,0 +1,9 @@
+[Unit]
+Description=Shopware: Generate sitemap
+
+[Timer]
+OnCalendar=daily
+Unit=shopware_sitemap.service
+
+[Install]
+WantedBy=timers.target

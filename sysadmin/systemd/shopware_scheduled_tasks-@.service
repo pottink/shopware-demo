@@ -1,0 +1,16 @@
+[Unit]
+Description=Shopware Scheduled Tasks Runner (#%i)
+After=network-online.target
+Requires=dbus.socket
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/approot/current
+ExecStart=/opt/approot/current/bin/console scheduled-task:run --time-limit=3600 --memory-limit=512M
+RestartSec=10s
+Restart=always
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=default.target
