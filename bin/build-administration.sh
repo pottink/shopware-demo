@@ -35,9 +35,9 @@ if [[ $(command -v jq) ]]; then
             echo "=> Installing npm dependencies for ${name}"
 
             if [[ -f "$path/package-lock.json" ]]; then
-                npm clean-install --prefix "$path"
+                npm clean-install --legacy-peer-deps --prefix "$path"
             else
-                npm install --prefix "$path"
+                npm install --legacy-peer-deps --prefix "$path"
             fi
         fi
     done
@@ -46,6 +46,7 @@ else
     echo "Cannot check extensions for required npm installations as jq is not installed"
 fi
 
+export NODE_OPTIONS=--openssl-legacy-provider
+
 (cd "${ADMIN_ROOT}"/Resources/app/administration && npm clean-install && npm run build)
 [[ ${SHOPWARE_SKIP_ASSET_COPY-""} ]] ||"${BIN_TOOL}" assets:install
-

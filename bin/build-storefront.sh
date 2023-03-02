@@ -47,6 +47,8 @@ else
     echo "Cannot check extensions for required npm installations as jq is not installed"
 fi
 
+export NODE_OPTIONS=--openssl-legacy-provider
+
 npm --prefix "${STOREFRONT_ROOT}"/Resources/app/storefront clean-install
 node "${STOREFRONT_ROOT}"/Resources/app/storefront/copy-to-vendor.js
 npm --prefix "${STOREFRONT_ROOT}"/Resources/app/storefront run production
